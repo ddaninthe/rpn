@@ -1,14 +1,12 @@
 package rpn.operator;
 
+import java.util.Stack;
+
 public class Addition implements IOperation {
-    private static Addition instance = new Addition();
-
-    public static Addition getInstance() {
-        return instance;
-    }
-
     @Override
-    public float compute(float a, float b) {
-        return a + b;
+    public void compute(Stack<Float> stack) {
+        float b = stack.pop();
+        float a = stack.pop();
+        stack.push(a + b);
     }
 }

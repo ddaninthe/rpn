@@ -2,74 +2,119 @@ package rpn;
 
 import org.junit.Test;
 
-import java.security.InvalidParameterException;
+import java.util.EmptyStackException;
+import java.util.Stack;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static rpn.Calculator.evaluate;
+import static rpn.Calculator.calculate;
 
 public class CLITest {
+    private static boolean equals(Stack<Float> stack1, Stack<Float> stack2 ) {
+        if (stack1.size() != stack2.size()) return false;
+
+        for (int i = 0; i < stack1.size(); i++) {
+            if (stack1.get(i).floatValue() != stack2.get(i).floatValue()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     @Test
     public void should_evaluate_single_digit_constant() {
-        assertThat(evaluate("5")).isEqualTo("5.0");
+        String[] tokens = Tokenizer.tokenize("5");
+        Stack<Float> expectedStack = new Stack<>();
+        expectedStack.push((float)5.0);
+        Stack<Float> result = calculate(tokens);
+        assertThat(equals(result ,expectedStack)).isTrue();
     }
 
     @Test
     public void should_evaluate_multiple_digits_constant() {
-        assertThat(evaluate("17")).isEqualTo("17.0");
+        String[] tokens = Tokenizer.tokenize("17,5");
+        Stack<Float> expectedStack = new Stack<>();
+        expectedStack.push((float) 17.5);
+        Stack<Float> result = calculate(tokens);
+        assertThat(equals(result ,expectedStack)).isTrue();
     }
 
     @Test
     public void should_evaluate_simple_addition() {
-        assertThat(evaluate("17 5 +")).isEqualTo("22.0");
+        String[] tokens = Tokenizer.tokenize("17 5 +");
+        Stack<Float> expectedStack = new Stack<>();
+        expectedStack.push((float)22.0);
+        Stack<Float> result = calculate(tokens);
+        assertThat(equals(result, expectedStack)).isTrue();
     }
 
     @Test
     public void should_evaluate_more_complex_addition() {
-        assertThat(evaluate("2 3 5 + +")).isEqualTo("10.0");
+        String[] tokens = Tokenizer.tokenize("2 3 5 + +");
+        Stack<Float> expectedStack = new Stack<>();
+        expectedStack.push((float)10.0);
+        Stack<Float> result = calculate(tokens);
+        assertThat(equals(result ,expectedStack)).isTrue();
     }
 
     @Test
     public void should_evaluate_negative_number() {
-        assertThat(evaluate("-5 1 +")).isEqualTo("-4.0");
+        String[] tokens = Tokenizer.tokenize("-5 1 +");
+        Stack<Float> expectedStack = new Stack<>();
+        expectedStack.push((float)-4.0);
+        Stack<Float> result = calculate(tokens);
+        assertThat(equals(result ,expectedStack)).isTrue();
     }
 
     @Test
     public void should_evaluate_more_complex_addition_and_multiplication() {
-        assertThat(evaluate("3 5 8 * 7 + * ")).isEqualTo("141.0");
+        String[] tokens = Tokenizer.tokenize("3 5 8 * 7 + * ");
+        Stack<Float> expectedStack = new Stack<>();
+        expectedStack.push((float)141.0);
+        Stack<Float> result = calculate(tokens);
+        assertThat(equals(result ,expectedStack)).isTrue();
     }
 
     @Test
     public void should_evaluate_calcul_and_number() {
-        assertThat(evaluate("7 2 - 3 4 ")).isEqualTo("5.0 3.0 4.0");
+        String[] tokens = Tokenizer.tokenize("7 2 - 3 4 ");
+        Stack<Float> expectedStack = new Stack<>();
+        expectedStack.push((float)5.0);
+        expectedStack.push((float)3.0);
+        expectedStack.push((float)4.0);
+        Stack<Float> result = calculate(tokens);
+        assertThat(equals(result ,expectedStack)).isTrue();
     }
 
     @Test
     public void should_evaluate_calcul_float() {
-        assertThat(evaluate("1.2 1.3 +")).isEqualTo("2.5");
+        String[] tokens = Tokenizer.tokenize("1.2 1.3 +");
+        Stack<Float> expectedStack = new Stack<>();
+        expectedStack.push((float)2.5);
+        Stack<Float> result = calculate(tokens);
+        assertThat(equals(result ,expectedStack)).isTrue();
     }
 
     @Test
     public void should_evaluate_division() {
-        assertThat(evaluate("27 9 /")).isEqualTo("3.0");
+        String[] tokens = Tokenizer.tokenize("27 9 /");
+        Stack<Float> expectedStack = new Stack<>();
+        expectedStack.push((float)3.0);
+        Stack<Float> result = calculate(tokens);
+        assertThat(equals(result ,expectedStack)).isTrue();
     }
 
     @Test
     public void should_evaluate_to_few_character(){
         try {
-            evaluate("0 +");
-        }
-        catch(InvalidParameterException exception) {
-            assertThat(exception.getMessage()).isEqualTo("Parameters count is invalid.");
+            calculate(Tokenizer.tokenize("0 +"));
+        } catch(Exception exception) {
+            assertThat(exception instanceof EmptyStackException).isTrue();
         }
     }
 
     @Test
     public void should_evaluate_illegal_character(){
-        try {
-            evaluate("i");
-        }
-        catch(IllegalArgumentException exception) {
-            assertThat(exception.getMessage()).isEqualTo("Illegal argument : i");
-        }
+        Stack<Float> result = calculate(Tokenizer.tokenize("i"));
+        assertThat(result).hasSize(0);
     }
 }

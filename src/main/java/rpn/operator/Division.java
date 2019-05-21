@@ -1,14 +1,18 @@
 package rpn.operator;
 
+import java.util.Stack;
+
 public class Division implements IOperation {
-    private static Division instance = new Division();
-
-    public static Division getInstance() {
-        return instance;
-    }
-
     @Override
-    public float compute(float a, float b) {
-        return a / b;
+    public void compute(Stack<Float> stack) {
+        float b = stack.pop();
+        float a = stack.pop();
+
+        if (b != 0) {
+            stack.push(a / b);
+        } else {
+            stack.push(a);
+            stack.push(b);
+        }
     }
 }
