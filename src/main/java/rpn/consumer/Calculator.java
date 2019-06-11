@@ -29,7 +29,6 @@ public class Calculator implements Consumer {
         String expressionId = message.expressionId();
         Stack<Double> stack;
 
-        System.out.println(message.expressionId());
         if (stacks.containsKey(expressionId)) {
             stack = stacks.get(expressionId);
         } else {

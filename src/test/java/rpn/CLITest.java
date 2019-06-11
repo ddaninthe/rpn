@@ -44,26 +44,28 @@ public class CLITest {
     }
 
     @Test
-    public void should_return_5_by_addition() {
+    public void should_return_5_by_addition() throws InterruptedException {
         String expressionId = UUID.randomUUID().toString();
         bus.subscribe(EndOfClient.MESSAGE_TYPE, message -> {
             assertThat(((EndOfClient) message).getStack().pop()).isEqualTo(5);
             received = true;
         });
+        Thread.sleep(5000);
         bus.publish(new ExpressionMessage(expressionId, "4 1 +"));
 
-        while (!received);
     }
 
     @Test
-    public void should_return_3_by_subtraction() {
+    public void should_return_3_by_subtraction() throws InterruptedException {
         String expressionId = UUID.randomUUID().toString();
         bus.subscribe(EndOfClient.MESSAGE_TYPE, message -> {
             assertThat(((EndOfClient) message).getStack().pop()).isEqualTo(2);
             received = true;
         });
+        Thread.sleep(5000);
         bus.publish(new ExpressionMessage(expressionId, "4 1 + 3 -"));
 
-        while (!received);
     }
+
+
 }
