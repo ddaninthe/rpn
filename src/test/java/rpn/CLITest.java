@@ -1,14 +1,20 @@
 package rpn;
 
+import org.junit.Before;
 import org.junit.Test;
+import rpn.consumer.*;
+import rpn.message.*;
+import rpn.bus.InMemoryBus;
 
-import java.util.EmptyStackException;
 import java.util.Stack;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static rpn.Calculator.calculate;
 
 public class CLITest {
+    private InMemoryBus bus;
+    private boolean received;
+
     private static boolean equals(Stack<Float> stack1, Stack<Float> stack2 ) {
         if (stack1.size() != stack2.size()) return false;
 
@@ -20,101 +26,44 @@ public class CLITest {
         return true;
     }
 
-    @Test
-    public void should_evaluate_single_digit_constant() {
-        String[] tokens = Tokenizer.tokenize("5");
-        Stack<Float> expectedStack = new Stack<>();
-        expectedStack.push((float)5.0);
-        Stack<Float> result = calculate(tokens);
-        assertThat(equals(result ,expectedStack)).isTrue();
+    @Before
+    public void setup() {
+        bus = new InMemoryBus();
+
+        bus.subscribe(ExpressionMessage.MESSAGE_TYPE, new TokenizerConsumer(bus, "\\s+"));
+        Calculator calculator = new Calculator(bus);
+        bus.subscribe(TokenMessage.MESSAGE_TYPE, calculator);
+        bus.subscribe(EndOfToken.MESSAGE_TYPE, calculator);
+        bus.subscribe(ResultMessage.MESSAGE_TYPE, calculator);
+        bus.subscribe(AdditionMessage.MESSAGE_TYPE, new AdditionConsumer(bus));
+        bus.subscribe(SubtractionMessage.MESSAGE_TYPE, new SubtractionConsumer(bus));
+        bus.subscribe(MultiplicationMessage.MESSAGE_TYPE, new MultiplicationConsumer(bus));
+        bus.subscribe(DivisionMessage.MESSAGE_TYPE, new DivisionConsumer(bus));
+
+        received = false;
     }
 
     @Test
-    public void should_evaluate_multiple_digits_constant() {
-        String[] tokens = Tokenizer.tokenize("17,5");
-        Stack<Float> expectedStack = new Stack<>();
-        expectedStack.push((float) 17.5);
-        Stack<Float> result = calculate(tokens);
-        assertThat(equals(result ,expectedStack)).isTrue();
+    public void should_return_5_by_addition() {
+        String expressionId = UUID.randomUUID().toString();
+        bus.subscribe(EndOfClient.MESSAGE_TYPE, message -> {
+            assertThat(((EndOfClient) message).getStack().pop()).isEqualTo(5);
+            received = true;
+        });
+        bus.publish(new ExpressionMessage(expressionId, "4 1 +"));
+
+        while (!received);
     }
 
     @Test
-    public void should_evaluate_simple_addition() {
-        String[] tokens = Tokenizer.tokenize("17 5 +");
-        Stack<Float> expectedStack = new Stack<>();
-        expectedStack.push((float)22.0);
-        Stack<Float> result = calculate(tokens);
-        assertThat(equals(result, expectedStack)).isTrue();
-    }
+    public void should_return_3_by_subtraction() {
+        String expressionId = UUID.randomUUID().toString();
+        bus.subscribe(EndOfClient.MESSAGE_TYPE, message -> {
+            assertThat(((EndOfClient) message).getStack().pop()).isEqualTo(2);
+            received = true;
+        });
+        bus.publish(new ExpressionMessage(expressionId, "4 1 + 3 -"));
 
-    @Test
-    public void should_evaluate_more_complex_addition() {
-        String[] tokens = Tokenizer.tokenize("2 3 5 + +");
-        Stack<Float> expectedStack = new Stack<>();
-        expectedStack.push((float)10.0);
-        Stack<Float> result = calculate(tokens);
-        assertThat(equals(result ,expectedStack)).isTrue();
-    }
-
-    @Test
-    public void should_evaluate_negative_number() {
-        String[] tokens = Tokenizer.tokenize("-5 1 +");
-        Stack<Float> expectedStack = new Stack<>();
-        expectedStack.push((float)-4.0);
-        Stack<Float> result = calculate(tokens);
-        assertThat(equals(result ,expectedStack)).isTrue();
-    }
-
-    @Test
-    public void should_evaluate_more_complex_addition_and_multiplication() {
-        String[] tokens = Tokenizer.tokenize("3 5 8 * 7 + * ");
-        Stack<Float> expectedStack = new Stack<>();
-        expectedStack.push((float)141.0);
-        Stack<Float> result = calculate(tokens);
-        assertThat(equals(result ,expectedStack)).isTrue();
-    }
-
-    @Test
-    public void should_evaluate_calcul_and_number() {
-        String[] tokens = Tokenizer.tokenize("7 2 - 3 4 ");
-        Stack<Float> expectedStack = new Stack<>();
-        expectedStack.push((float)5.0);
-        expectedStack.push((float)3.0);
-        expectedStack.push((float)4.0);
-        Stack<Float> result = calculate(tokens);
-        assertThat(equals(result ,expectedStack)).isTrue();
-    }
-
-    @Test
-    public void should_evaluate_calcul_float() {
-        String[] tokens = Tokenizer.tokenize("1.2 1.3 +");
-        Stack<Float> expectedStack = new Stack<>();
-        expectedStack.push((float)2.5);
-        Stack<Float> result = calculate(tokens);
-        assertThat(equals(result ,expectedStack)).isTrue();
-    }
-
-    @Test
-    public void should_evaluate_division() {
-        String[] tokens = Tokenizer.tokenize("27 9 /");
-        Stack<Float> expectedStack = new Stack<>();
-        expectedStack.push((float)3.0);
-        Stack<Float> result = calculate(tokens);
-        assertThat(equals(result ,expectedStack)).isTrue();
-    }
-
-    @Test
-    public void should_evaluate_to_few_character(){
-        try {
-            calculate(Tokenizer.tokenize("0 +"));
-        } catch(Exception exception) {
-            assertThat(exception instanceof EmptyStackException).isTrue();
-        }
-    }
-
-    @Test
-    public void should_evaluate_illegal_character(){
-        Stack<Float> result = calculate(Tokenizer.tokenize("i"));
-        assertThat(result).hasSize(0);
+        while (!received);
     }
 }
