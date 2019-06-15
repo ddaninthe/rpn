@@ -78,7 +78,7 @@ public class CLITest {
     }
 
     @Test
-    public void should_throw_exception() {
+    public void should_throw_empty_stack_exception() {
         String expressionId = UUID.randomUUID().toString();
 
         bus.subscribe(ExceptionMessage.MESSAGE_TYPE, message -> {
