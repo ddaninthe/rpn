@@ -1,7 +1,5 @@
 package rpn.message;
 
-import rpn.message.Message;
-
 public class ExceptionMessage implements Message {
     public static final String MESSAGE_TYPE = "error";
 

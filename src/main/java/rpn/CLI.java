@@ -38,7 +38,6 @@ class CLI {
         System.out.println("\"" + expression + "\" with id " + expressionId);
         System.out.println("\"" + expression + "\" with id " + expressionId2);
 
-
         Thread t = new Thread(() ->
                 bus.publish(new ExpressionMessage(expressionId, expression)));
         Thread t2 = new Thread(() ->

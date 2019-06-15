@@ -6,6 +6,7 @@ import rpn.consumer.*;
 import rpn.message.*;
 import rpn.bus.InMemoryBus;
 
+import java.util.EmptyStackException;
 import java.util.Stack;
 import java.util.UUID;
 
@@ -13,18 +14,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class CLITest {
     private InMemoryBus bus;
-    private boolean received;
-
-    private static boolean equals(Stack<Float> stack1, Stack<Float> stack2 ) {
-        if (stack1.size() != stack2.size()) return false;
-
-        for (int i = 0; i < stack1.size(); i++) {
-            if (stack1.get(i).floatValue() != stack2.get(i).floatValue()) {
-                return false;
-            }
-        }
-        return true;
-    }
 
     @Before
     public void setup() {
@@ -39,33 +28,64 @@ public class CLITest {
         bus.subscribe(SubtractionMessage.MESSAGE_TYPE, new SubtractionConsumer(bus));
         bus.subscribe(MultiplicationMessage.MESSAGE_TYPE, new MultiplicationConsumer(bus));
         bus.subscribe(DivisionMessage.MESSAGE_TYPE, new DivisionConsumer(bus));
-
-        received = false;
     }
 
     @Test
-    public void should_return_5_by_addition() throws InterruptedException {
+    public void should_return_5_by_addition() {
         String expressionId = UUID.randomUUID().toString();
-        bus.subscribe(EndOfClient.MESSAGE_TYPE, message -> {
-            assertThat(((EndOfClient) message).getStack().pop()).isEqualTo(5);
-            received = true;
-        });
-        Thread.sleep(5000);
+        bus.subscribe(EndOfClient.MESSAGE_TYPE, message ->
+            assertThat(((EndOfClient) message).getStack().pop()).isEqualTo(5));
         bus.publish(new ExpressionMessage(expressionId, "4 1 +"));
-
     }
 
     @Test
-    public void should_return_3_by_subtraction() throws InterruptedException {
+    public void should_return_3_by_subtraction() {
         String expressionId = UUID.randomUUID().toString();
-        bus.subscribe(EndOfClient.MESSAGE_TYPE, message -> {
-            assertThat(((EndOfClient) message).getStack().pop()).isEqualTo(2);
-            received = true;
-        });
-        Thread.sleep(5000);
+        bus.subscribe(EndOfClient.MESSAGE_TYPE, message ->
+            assertThat(((EndOfClient) message).getStack().pop()).isEqualTo(2));
         bus.publish(new ExpressionMessage(expressionId, "4 1 + 3 -"));
-
     }
 
+    @Test
+    public void should_return_right_result_for_2_parallel_operation() {
+        String id1 = UUID.randomUUID().toString();
+        String id2 = UUID.randomUUID().toString();
 
+        bus.subscribe(EndOfClient.MESSAGE_TYPE, message -> {
+            if (id1.equals(message.expressionId())) {
+                Stack<Double> stack = ((EndOfClient) message).getStack();
+                assertThat(stack.pop()).isEqualTo(4);
+                assertThat(stack.pop()).isEqualTo(18);
+            } else if (id2.equals(message.expressionId())) {
+                assertThat(((EndOfClient) message).getStack().pop()).isEqualTo(45);
+            }
+        });
+
+        bus.publish(new ExpressionMessage(id1, "9 2 * 4"));
+        bus.publish(new ExpressionMessage(id2, "100 2 / 10 - 5 +"));
+    }
+
+    @Test
+    public void should_catch_arithmetic_exception() {
+        String expressionId = UUID.randomUUID().toString();
+
+        bus.subscribe(ExceptionMessage.MESSAGE_TYPE, message -> {
+            Exception e = ((ExceptionMessage) message).getException();
+            assertThat(e instanceof ArithmeticException).isTrue();
+        });
+
+        bus.publish(new ExpressionMessage(expressionId,"10 0 /"));
+    }
+
+    @Test
+    public void should_throw_exception() {
+        String expressionId = UUID.randomUUID().toString();
+
+        bus.subscribe(ExceptionMessage.MESSAGE_TYPE, message -> {
+            Exception e = ((ExceptionMessage) message).getException();
+            assertThat(e instanceof EmptyStackException).isTrue();
+        });
+
+        bus.publish(new ExpressionMessage(expressionId, "43 *"));
+    }
 }

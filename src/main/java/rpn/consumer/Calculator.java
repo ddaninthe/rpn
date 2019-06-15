@@ -1,5 +1,6 @@
 package rpn.consumer;
 
+import org.apache.commons.lang3.math.NumberUtils;
 import rpn.bus.Bus;
 import rpn.message.*;
 import rpn.operator.Operator;
@@ -10,7 +11,8 @@ import java.util.Map;
 import java.util.Stack;
 
 public class Calculator implements Consumer {
-    private static final int TIMEOUT = 500;
+    private static final int WAIT_TIME = 500;
+    private static final int TIMEOUT = 10; // 5 seconds
 
     private final Bus bus;
     private final Map<String, Stack<Double>> stacks;
@@ -42,7 +44,7 @@ public class Calculator implements Consumer {
             TokenMessage tokenMessage = (TokenMessage) message;
             String token = tokenMessage.getToken();
 
-            if (token.matches("^[+-]?\\d+(\\.\\d+)?$")) {
+            if (NumberUtils.isParsable(token)) {
                 stack.push(Double.parseDouble(token));
             }
             else {
@@ -63,11 +65,14 @@ public class Calculator implements Consumer {
         }
         else if (EndOfToken.MESSAGE_TYPE.equals(messageType)) {
            try {
-               while (waitingMap.get(expressionId)) {
-                   wait(TIMEOUT);
+               int loop = 0;
+               while (waitingMap.get(expressionId) && loop++ < TIMEOUT) {
+                   wait(WAIT_TIME);
                }
-               EndOfClient eoc = new EndOfClient(expressionId, stacks.get(expressionId));
-               bus.publish(eoc);
+               if (loop < TIMEOUT) {
+                   EndOfClient eoc = new EndOfClient(expressionId, stacks.get(expressionId));
+                   bus.publish(eoc);
+               }
            } catch (InterruptedException e) {
                waitingMap.remove(expressionId);
                stacks.remove(expressionId);
